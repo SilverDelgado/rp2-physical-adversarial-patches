@@ -1,0 +1,56 @@
+Why does changing from linear to non linear reduce the model vulnerability to adversarial examples?
+
+
+how to calculate how many numbers can you represen t with 8 bits.
+2⁸? 256 values.
+
+Potemkin village?
+	construccion falsa o fachada falsa que esconde una realidad "mala" por detras y hacer creer que todo está bien.
+
+perceptual distance?
+
+softmax regression is linear? also vulnerable to adversarial examples. it is put as comparison with deep neuronal networks on these adversarial examples
+
+maxout networks?
+
+l1 regulariaztion? l1 norm? 
+
+dropout is used for data augmentation? "Training on adversarial examples is somewhat dif-
+ferent from other data augmentation schemes; usually, one augments the data with transformations
+such as translations that are expected to actually occur in the test set. This form of data augmenta-
+tion instead uses inputs that are unlikely to occur naturally but that expose flaws in the ways that the
+model conceptualizes its decision function. At the time, this procedure was never demonstrated to
+improve beyond dropout on a state of the art benchmark"
+
+finetuning DBM's with dropout?
+
+" Adversarial examples generated via the original model yield an error rate of 19.6% on
+the adversarially trained model, while adversarial examples generated via the new model yield an
+error rate of 40.9% on the original model. When the adversarially trained model does misclassify an
+adversarial example, its predictions are unfortunately still highly confident. The average confidence
+on a misclassified example was 81.4%. We also found that the weights of the learned model changed
+significantly, with the weights of the adversarially trained model being significantly more localized
+and interpretable (see Fig. 3)" ?
+
+
+
+-----
+
+Sharif et al. attacked face recognition systems by printing
+adversarial perturbations on the frames of eyeglasses [32].
+
+Lo de l1 diria donde hay cambios o mas importancia oq ue, coo  es que saca de ahi lo que importa para hacer el mask o lo que no importa, compo sabe que esa region es weak? 
+dame ejmplo con numeros. Compute perturbations using the L1 regular-
+ization and with a mask that occupies the entire surface area
+of the sign. L1 makes the optimizer favor a sparse pertur-
+bation vector, therefore concentrating the perturbations on
+regions that are most vulnerable. Visualizing the resulting
+perturbation provides guidance on mask placement
+
+subtle poster attack?? what is it?
+
+
+---
+code: compo funciona la arquitecura de le net, (idea segun logica y arqutiectura construccion)
+
+
