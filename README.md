@@ -1,59 +1,63 @@
-# Parches adversarios físicos con RP2 sobre señales de tráfico
+**English** | [Español](README.es.md)
 
-Implementación en PyTorch del algoritmo RP2 (*Robust Physical Perturbations*, Eykholt et al. 2018) contra una CNN entrenada con GTSRB, comparándolo con FGSM. Lo hice en la asignatura Sistemas de Inteligencia Artificial Ciberseguros (UMA, curso 2026/27).
+# Physical adversarial patches with RP2 on traffic signs
 
-![Clean, FGSM y RP2 con distintas áreas de parche](img/clean_fgsm_rp2.png)
+PyTorch implementation of the RP2 algorithm (*Robust Physical Perturbations*, Eykholt et al. 2018) against a CNN trained on GTSRB, compared with FGSM.
 
-## Contenido
+![Clean, FGSM and RP2 with different patch areas](img/clean_fgsm_rp2.png)
 
-- `notebooks/P1_src1.ipynb`: FGSM sobre MNIST con una LeNet preentrenada. Es el notebook base de la asignatura, lo que hice fue analizarlo y verificar que el ataque está bien implementado (está explicado en la entrega p1b).
-- `notebooks/P1_src2.ipynb`: el notebook principal. Entreno una CNN sobre GTSRB, implemento FGSM (untargeted y targeted) y RP2 en dos fases, y hago los experimentos de tamaño de parche y de robustez frente a transformaciones.
-- `entrega/Entrega_p1a.pdf`: parte teórica (data poisoning vs adversarial attacks, ataques globales vs parches, RP2, etc.).
-- `entrega/Entrega_p1b.pdf`: análisis del código y de los resultados.
-- `notas/questions.txt`: dudas que me iba apuntando mientras leía los papers.
+## Contents
+
+- `notebooks/P1_src1.ipynb`: FGSM on MNIST with a pretrained LeNet. This is the base notebook from the course, what I did was analyse it and check that the attack is implemented correctly (explained in the p1b report).
+- `notebooks/P1_src2.ipynb`: the main notebook. I train a CNN on GTSRB, implement FGSM (untargeted and targeted) and the two stages of RP2, and run the experiments on patch size and robustness against transformations.
+- `entrega/Entrega_p1a.pdf`: theory part (data poisoning vs adversarial attacks, global attacks vs patches, RP2, etc.).
+- `entrega/Entrega_p1b.pdf`: analysis of the code and the results.
+- `notas/questions.txt`: questions I was writing down while reading the papers.
+
+The reports and notes are in Spanish.
 
 ## FGSM vs RP2
 
-FGSM es de un único paso y modifica todos los píxeles de la imagen al mismo tiempo, moviéndose en la dirección de `sign(gradiente)` con el paso máximo que permite el presupuesto ε. El resultado suele ser ruido de alta frecuencia, cambios pequeños que no sobreviven las transformaciones del mundo real (impresión, distancia, luz...). Y además, si la perturbación es sobre toda la escena, ¿cómo modificas lo que hay en el fondo, detrás de la señal? No es posible.
+FGSM is a single step attack that modifies every pixel of the image at the same time, moving in the direction of `sign(gradient)` with the maximum step the budget epsilon allows. The result is usually high frequency noise, small changes that don't survive real world transformations (printing, distance, lighting...). And also, if the perturbation covers the whole scene, how do you modify what is in the background, behind the sign? You can't.
 
-RP2 en cambio no perturba toda la imagen, sino que se centra en ciertas áreas (parches, mediante máscaras) y optimiza sobre muchas transformaciones a la vez (Expectation over Transformations), así que el parche tiene opciones de seguir funcionando cuando la señal se ve desde otro ángulo o con otra luz.
+RP2 on the other hand doesn't perturb the whole image, it focuses on certain areas (patches, using masks) and optimizes over many transformations at once (Expectation over Transformations), so the patch has a chance of still working when the sign is seen from another angle or with different lighting.
 
-Lo implementé en dos fases, como en el paper:
+I implemented it in two stages, like in the paper:
 
-1. **Fase 1**: se optimiza una perturbación con regularización L1 y una máscara que ocupa todo el área de la señal (el ROI que viene en el CSV de GTSRB). La L1 busca sparsity, así que la perturbación se concentra en las regiones más vulnerables, y de ahí se saca dónde colocar la máscara.
-2. **Fase 2**: con la máscara ya fijada en esas regiones (me quedo con el 30%, 20%, 15%, 10% o 5% del ROI), se vuelve a optimizar el ruido dentro de ella con regularización L2 y total variation para que sea más suave.
+1. **Stage 1**: a perturbation is optimized with L1 regularization and a mask that covers the whole sign area (the ROI that comes in the GTSRB CSV). L1 looks for sparsity, so the perturbation concentrates on the most vulnerable regions, and that tells you where to place the mask.
+2. **Stage 2**: with the mask fixed on those regions (keeping 30%, 20%, 15%, 10% or 5% of the ROI), the noise inside it is optimized again with L2 regularization and total variation so it's smoother.
 
-En las dos fases el parche es uno solo, compartido por 128 imágenes de distintas clases, y en cada paso se les aplican transformaciones aleatorias (rotación de ±15°, pequeñas traslaciones, escala entre 0.9 y 1.1 y cambios de contraste). El término NPS del paper (para que los colores se puedan imprimir) no lo he implementado, porque aquí todo se queda en digital.
+In both stages there is a single patch shared by 128 images from different classes, and at every step random transformations are applied (rotation between -15 and 15 degrees, small translations, scale between 0.9 and 1.1 and contrast changes). I didn't implement the NPS term from the paper (so the colours can be printed), since here everything stays digital.
 
-El objetivo del ataque es la clase 33 de GTSRB.
+The target of the attack is class 33 of GTSRB.
 
-## Resultados
+## Results
 
-Tamaño del parche frente al éxito del ataque dirigido, evaluado en cada condición (original, más brillo, más oscuro, rotada 15° y escalada):
+Patch size vs targeted attack success, evaluated on each condition (original, brighter, darker, rotated 15 degrees and scaled):
 
-![Tamaño del parche frente a ASR](img/tamano_parche_vs_asr.png)
+![Patch size vs ASR](img/tamano_parche_vs_asr.png)
 
-Al reducir el tamaño del parche el ASR baja y las predicciones dejan de ser la que nosotros queremos. En algunos casos incluso acaba siendo la misma que da FGSM (clase 7). Con un 30% del ROI se pasa del 90% de éxito en todas las condiciones, y a partir del 15% se supera el 50% en todas. Por debajo de eso ya no es consistente. La condición que más le cuesta es la de más brillo.
+When the patch gets smaller the ASR drops and the predictions stop being the one we want. In some cases it even ends up being the same one FGSM gives (class 7). With 30% of the ROI the attack succeeds more than 90% of the time in every condition, and from 15% it's above 50% in all of them. Below that it's not consistent anymore. The hardest condition is the brighter one.
 
-![FGSM epsilon vs RP2 área](img/fgsm_eps_vs_rp2_area.png)
+![FGSM epsilon vs RP2 area](img/fgsm_eps_vs_rp2_area.png)
 
-Para untargeted, FGSM funciona muy bien (con ε = 0.05 ya pasa del 90%). Pero FGSM no se podría usar en un caso real porque modifica toda la imagen, mientras que RP2 sí, porque se limita a un área dentro del ROI.
+For untargeted attacks FGSM works really well (with epsilon = 0.05 it's already above 90%). But FGSM couldn't be used in a real case because it modifies the whole image, while RP2 can, because it's limited to an area inside the ROI.
 
-La conclusión del paper es que no hay que confiar en el ruido físico (luz, distancia, ángulo) como protección, porque se puede optimizar sobre aproximaciones de esas transformaciones y obtener perturbaciones que siguen funcionando. Para defenderse lo más eficaz es el entrenamiento con ejemplos adversarios, que es justo lo que se ve en [defensive-distillation-cifar10](https://github.com/SilverDelgado/defensive-distillation-cifar10).
+The conclusion of the paper is that physical noise (lighting, distance, angle) shouldn't be trusted as protection, because you can optimize over approximations of those transformations and get perturbations that keep working. The most effective defence is adversarial training, which is exactly what comes next in [defensive-distillation-cifar10](https://github.com/SilverDelgado/defensive-distillation-cifar10).
 
-## Cómo ejecutarlo
+## How to run it
 
 ```bash
 pip install -r requirements.txt
 ```
 
-- Dataset GTSRB: [German Traffic Sign Recognition Benchmark en Kaggle](https://www.kaggle.com/datasets/meowmeowmeowmeowmeow/gtsrb-german-traffic-sign) (la versión con `Train.csv`, `Test.csv` y `Meta/`). La variable `DATASET_ROOT` de `P1_src2.ipynb` apunta a la carpeta donde yo lo tenía, hay que cambiarla a la vuestra.
-- `P1_src1.ipynb` necesita `lenet_mnist_model.pth`, que es el modelo LeNet del tutorial de FGSM de PyTorch, dentro de `data/`.
+- GTSRB dataset: [German Traffic Sign Recognition Benchmark on Kaggle](https://www.kaggle.com/datasets/meowmeowmeowmeowmeow/gtsrb-german-traffic-sign) (the version with `Train.csv`, `Test.csv` and `Meta/`). The `DATASET_ROOT` variable in `P1_src2.ipynb` points to the folder where I had it, change it to yours.
+- `P1_src1.ipynb` needs `lenet_mnist_model.pth`, which is the LeNet model from the PyTorch FGSM tutorial, inside `data/`.
 
-Los pesos y los datos no están en el repo.
+Weights and data are not included in the repo.
 
-## Referencias
+## References
 
 - Goodfellow, Shlens, Szegedy. *Explaining and Harnessing Adversarial Examples*. 2015. [arXiv:1412.6572](https://arxiv.org/abs/1412.6572)
 - Eykholt et al. *Robust Physical-World Attacks on Deep Learning Visual Classification*. CVPR 2018. [arXiv:1707.08945](https://arxiv.org/abs/1707.08945)
-- Código original de los autores (TensorFlow): [evtimovi/robust_physical_perturbations](https://github.com/evtimovi/robust_physical_perturbations)
+- Original code from the authors (TensorFlow): [evtimovi/robust_physical_perturbations](https://github.com/evtimovi/robust_physical_perturbations)
